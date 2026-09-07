@@ -10,8 +10,8 @@ number:
 date:
 consensus: true
 v: 3
-area: INT
-workgroup: Delay/Disruption Tolerant Networking
+area: "Internet"
+workgroup: "Delay/Disruption Tolerant Networking"
 
 keyword:
 
@@ -28,12 +28,12 @@ author:
   email: rtaylor@aalyria.com
 
 venue:
-  group: Delay/Disruption Tolerant Networking
-  type: Working Group
-  mail: dtn@ietf.org
-  arch: https://mailarchive.ietf.org/arch/browse/dtn/
-  github: ricktaylor/btpu
-  latest: https://ricktaylor.github.io/btpu/draft-taylor-dtn-btpx.html
+  group: "Delay/Disruption Tolerant Networking"
+  type: "Working Group"
+  mail: "dtn@ietf.org"
+  arch: "https://mailarchive.ietf.org/arch/browse/dtn/"
+  github: "ricktaylor/btpx"
+  latest: "https://ricktaylor.github.io/btpx/draft-taylor-dtn-btpx.html"
 
 normative:
 
