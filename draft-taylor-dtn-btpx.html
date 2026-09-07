@@ -1,0 +1,1744 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>Bundle Transfer Protocol - Cross-Link</title>
+<meta content="Rick Taylor" name="author">
+<meta content="
+       The Bundle Transfer Protocol - Unidirectional (BTPU) provides for the transfer of large binary objects, typically Bundle Protocol version 7 bundles, over a unidirectional, unreliable, frame-based link-layer protocol, and by design includes no return path. 
+       This document defines the Bundle Transfer Protocol - Cross-Link (BTPX), an extension to BTPU for deployments where independent BTPU channels exist in both directions between a pair of nodes.  It introduces a mechanism to correlate Transfers across such channels, the Object Correlator Hint, and a first application of that correlation, the Transfer Status Message, which allows a receiver to indicate to a sender that continued transfer of an object is unnecessary, whether because it has been completely received, or because it is unwanted. 
+       This document deliberately defines no acknowledgement or retransmission semantics; such mechanisms are deferred to future documents. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="DTN" name="keyword">
+<meta content="BPv7" name="keyword">
+<meta content="Bundle Protocol" name="keyword">
+<meta content="BTPU" name="keyword">
+<meta content="BTPX" name="keyword">
+<meta content="draft-taylor-dtn-btpx-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.7
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.3
+-->
+<link href="draft-taylor-dtn-btpx.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">BTPX</td>
+<td class="right">September 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Taylor</td>
+<td class="center">Expires 11 March 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Delay/Disruption Tolerant Networking</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-taylor-dtn-btpx-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-09-07" class="published">7 September 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-03-11">11 March 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">R. Taylor</div>
+<div class="org">Aalyria Technologies</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">Bundle Transfer Protocol - Cross-Link</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">The Bundle Transfer Protocol - Unidirectional (BTPU) provides for the transfer of large binary objects, typically Bundle Protocol version 7 bundles, over a unidirectional, unreliable, frame-based link-layer protocol, and by design includes no return path.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">This document defines the Bundle Transfer Protocol - Cross-Link (BTPX), an extension to BTPU for deployments where independent BTPU channels exist in both directions between a pair of nodes.  It introduces a mechanism to correlate Transfers across such channels, the Object Correlator Hint, and a first application of that correlation, the Transfer Status Message, which allows a receiver to indicate to a sender that continued transfer of an object is unnecessary, whether because it has been completely received, or because it is unwanted.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+<p id="section-abstract-3">This document deliberately defines no acknowledgement or retransmission semantics; such mechanisms are deferred to future documents.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://ricktaylor.github.io/btpu/draft-taylor-dtn-btpx.html">https://ricktaylor.github.io/btpu/draft-taylor-dtn-btpx.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-taylor-dtn-btpx/">https://datatracker.ietf.org/doc/draft-taylor-dtn-btpx/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">
+        Discussion of this document takes place on the
+        Delay/Disruption Tolerant Networking Working Group mailing list (<span><a href="mailto:dtn@ietf.org">mailto:dtn@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/dtn/">https://mailarchive.ietf.org/arch/browse/dtn/</a></span>.
+        Subscribe at <span><a href="https://www.ietf.org/mailman/listinfo/dtn/">https://www.ietf.org/mailman/listinfo/dtn/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+<p id="section-note.1-4">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/ricktaylor/btpu">https://github.com/ricktaylor/btpu</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 11 March 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1" class="keepWithNext"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-conventions-and-definitions" class="internal xref">Conventions and Definitions</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1" class="keepWithNext"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-protocol-overview" class="internal xref">Protocol Overview</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-channel-association" class="internal xref">Channel Association</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-correlators" class="internal xref">Correlators</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-reporting-transfer-status" class="internal xref">Reporting Transfer Status</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-object-correlator-hint" class="internal xref">Object Correlator Hint</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-transfer-status-message" class="internal xref">Transfer Status Message</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.1">
+                <p id="section-toc.1-1.5.2.1.1"><a href="#section-5.1" class="auto internal xref">5.1</a>.  <a href="#name-emitting-status-reports" class="internal xref">Emitting Status Reports</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5.2.2">
+                <p id="section-toc.1-1.5.2.2.1"><a href="#section-5.2" class="auto internal xref">5.2</a>.  <a href="#name-processing-status-reports" class="internal xref">Processing Status Reports</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-deployment-considerations" class="internal xref">Deployment Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-btpu-message-types" class="internal xref">BTPU Message Types</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-btpu-hint-types" class="internal xref">BTPU Hint Types</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.3">
+                <p id="section-toc.1-1.8.2.3.1"><a href="#section-8.3" class="auto internal xref">8.3</a>.  <a href="#name-btpu-transfer-status-codes-" class="internal xref">BTPU Transfer Status Codes Registry</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#appendix-A" class="auto internal xref">Appendix A</a>.  <a href="#name-examples" class="internal xref">Examples</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10.2.1">
+                <p id="section-toc.1-1.10.2.1.1"><a href="#appendix-A.1" class="auto internal xref">A.1</a>.  <a href="#name-suppression-of-an-in-progre" class="internal xref">Suppression of an in-progress Transfer</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.12">
+            <p id="section-toc.1-1.12.1"><a href="#appendix-C" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">The Bundle Transfer Protocol - Unidirectional (BTPU) <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span> transfers Bundles over unidirectional, unreliable, frame-based link-layer protocols.  Because the underlying link-layer is unidirectional, the protocol includes no in-band return path: loss is handled solely by the repetition of Messages by the sender.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">However, many deployments of unidirectional link-layer protocols are not unidirectional at the system level: pairs of opposing unidirectional channels frequently exist between the same two nodes, for example, a high-rate space downlink paired with a low-rate uplink, and each such channel can carry an independent instance of BTPU.  The Deployment Considerations of <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span> note that any acknowledgement system designed to provide reliability requires a logically separate path from receiver back to sender.  When such a logically separate path is itself a BTPU channel in the opposing direction, the two channels can be "cross-linked": Messages received on one channel can refer to Transfers occurring on another.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This document defines the Bundle Transfer Protocol - Cross-Link (BTPX), the minimal machinery required for such cross-linking:<a href="#section-1-3" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-1-4.1">
+          <p id="section-1-4.1.1">The <span><a href="#object-correlator-hint" class="internal xref">Object Correlator Hint</a> (<a href="#object-correlator-hint" class="auto internal xref">Section 4</a>)</span>, which attaches a sender-chosen opaque identifier, a Correlator, to the Messages transferring an object, allowing that object to be referenced independently of any particular Transfer or Channel.<a href="#section-1-4.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li class="normal" id="section-1-4.2">
+          <p id="section-1-4.2.1">The <span><a href="#transfer-status-message" class="internal xref">Transfer Status Message</a> (<a href="#transfer-status-message" class="auto internal xref">Section 5</a>)</span>, which allows a node receiving a Transfer to report to the sending node that continued transfer of the identified object is unnecessary, whether because it has been completely received, or because it is unwanted.<a href="#section-1-4.2.1" class="pilcrow">¶</a></p>
+</li>
+      </ul>
+<p id="section-1-5">The correlation mechanism is intentionally more general than the single application defined in this document: future documents can define further feedback semantics, such as selective or negative acknowledgement, built on the same Correlators.  This document deliberately defines no segment-level acknowledgement, retransmission, or reliability semantics: a Transfer Status Message reports a disposition of a whole object, and its only effect is the suppression of unnecessary transmission.<a href="#section-1-5" class="pilcrow">¶</a></p>
+<p id="section-1-6">All feedback enabled by this document is advisory.  A sender that never receives, or chooses to ignore, a Transfer Status Message behaves exactly as a sender conforming to <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span> alone, and no mechanism in this document places any additional data retention obligation on a sender.<a href="#section-1-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="conventions-and-definitions">
+<section id="section-2">
+      <h2 id="name-conventions-and-definitions">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-conventions-and-definitions" class="section-name selfRef">Conventions and Definitions</a>
+      </h2>
+<p id="section-2-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<div id="terminology">
+<section id="section-2.1">
+        <h3 id="name-terminology">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
+        </h3>
+<p id="section-2.1-1">This document uses the terms Bundle, Link-layer PDU, Message, Segment, Transfer, and Transfer Window as defined in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>.  Additionally, within the scope of this document, the following terms have specific meaning:<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-2.1-2">
+          <dt id="section-2.1-2.1">Channel:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.2">
+            <p id="section-2.1-2.2.1">A single instance of the BTPU protocol between one sending node and one or more receiving nodes, operating over a single logical channel of a link-layer protocol, as described in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>.<a href="#section-2.1-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.1-2.3">Correlator:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.4">
+            <p id="section-2.1-2.4.1">An opaque octet string chosen by a sending node to identify an object, typically a Bundle, independently of any particular Transfer of that object, see <a href="#correlators" class="auto internal xref">Section 3.2</a>.<a href="#section-2.1-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-2.1-2.5">Associated Channels:</dt>
+          <dd style="margin-left: 1.5em" id="section-2.1-2.6">
+            <p id="section-2.1-2.6.1">The set of Channels, in both directions, between a pair of nodes, known to each node by a-priori configuration, see <a href="#channel-association" class="auto internal xref">Section 3.1</a>.<a href="#section-2.1-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="protocol-overview">
+<section id="section-3">
+      <h2 id="name-protocol-overview">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-protocol-overview" class="section-name selfRef">Protocol Overview</a>
+      </h2>
+<div id="channel-association">
+<section id="section-3.1">
+        <h3 id="name-channel-association">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-channel-association" class="section-name selfRef">Channel Association</a>
+        </h3>
+<p id="section-3.1-1">This extension applies when a pair of nodes is connected by Channels in both directions.  It assumes that a-priori configuration identifies, for each Channel, the node at the far end, and hence which Channels form the set of Associated Channels between a pair of nodes.  No in-band discovery or negotiation mechanism is defined.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">Because a Correlator is unambiguous within the scope of the node that chose it, see <a href="#correlators" class="auto internal xref">Section 3.2</a>, correlation does not depend on which particular Channel carries a Message: any number of Channels in each direction can be associated between a pair of nodes, and a Message received on any Associated Channel can be correlated with a Transfer on any other.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-3">A Channel carrying Transfer Status Messages is an ordinary BTPU Channel: it can simultaneously carry its own Transfers, with the Transfer Status Messages multiplexed between the Messages of those Transfers in the usual way.  No dedicated feedback channel is required.<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="correlators">
+<section id="section-3.2">
+        <h3 id="name-correlators">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-correlators" class="section-name selfRef">Correlators</a>
+        </h3>
+<p id="section-3.2-1">A Correlator serves a similar purpose to an entity-tag in HTTP <span>[<a href="#RFC9110" class="cite xref">RFC9110</a>]</span>: it is a compact, opaque name for a piece of content, allowing a later reference to that content, rather than to a particular attempt to deliver it.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+<p id="section-3.2-2">A Correlator is chosen by the sending node, and attached to the Messages transferring an object using the <span><a href="#object-correlator-hint" class="internal xref">Object Correlator Hint</a> (<a href="#object-correlator-hint" class="auto internal xref">Section 4</a>)</span>.  A Correlator identifies the object being transferred, not the Transfer itself: if the same object is transferred again, for example on a different Channel, or after an earlier Transfer was cancelled, the sender <span class="bcp14">SHOULD</span> use the same Correlator value, as this correlation across Transfers is the purpose of the mechanism.<a href="#section-3.2-2" class="pilcrow">¶</a></p>
+<p id="section-3.2-3">Transfer numbers are deliberately not reused as Correlators.  Transfer numbers are scoped to a single Channel, are chosen at random at Channel start, and recycle modulo 2^32 as the Transfer Window advances; over the long signal propagation delays for which BTPU is designed, a cross-channel reference to a Transfer number could arrive after the number has left the Transfer Window, or worse, been reused for a different object.  A Correlator is not subject to the Transfer Window of any Channel, and remains valid as a reference regardless of the state of the Transfers that carried it.<a href="#section-3.2-3" class="pilcrow">¶</a></p>
+<p id="section-3.2-4">A Correlator has no structure visible to a receiver: a receiving node <span class="bcp14">MUST</span> treat a Correlator as an opaque octet string, and compare Correlator values only for octet-wise equality.<a href="#section-3.2-4" class="pilcrow">¶</a></p>
+<p id="section-3.2-5">A sending node <span class="bcp14">MUST NOT</span> use the same Correlator value to identify two different objects transferred to the same node while the earlier object could still reasonably be referenced by a peer.  When the objects transferred are BPv7 bundles, this requirement is satisfied by not reusing a Correlator value until the bundle lifetime of the original bundle, see <span><a href="https://rfc-editor.org/rfc/rfc9171#section-4.2.2" class="relref">Section 4.2.2</a> of [<a href="#RFC9171" class="cite xref">RFC9171</a>]</span>, has expired.<a href="#section-3.2-5" class="pilcrow">¶</a></p>
+<p id="section-3.2-6">Correlator values <span class="bcp14">SHOULD NOT</span> be predictable by third parties, see <a href="#security-considerations" class="auto internal xref">Section 6</a>.<a href="#section-3.2-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="reporting-status">
+<section id="section-3.3">
+        <h3 id="name-reporting-transfer-status">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-reporting-transfer-status" class="section-name selfRef">Reporting Transfer Status</a>
+        </h3>
+<p id="section-3.3-1">When a node receives Messages carrying an Object Correlator Hint, it might determine that continued transmission of the identified object is unnecessary, for example:<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-3.3-2.1">
+            <p id="section-3.3-2.1.1">The node has completed reassembly of the object, or already holds a complete copy, perhaps received via another route.<a href="#section-3.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-2.2">
+            <p id="section-3.3-2.2.1">The node has insufficient resources to store the object.<a href="#section-3.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-3.3-2.3">
+            <p id="section-3.3-2.3.1">An upper-layer protocol has indicated that the object is unwanted.<a href="#section-3.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-3.3-3">In such cases, the receiving node <span class="bcp14">MAY</span> emit a <span><a href="#transfer-status-message" class="internal xref">Transfer Status Message</a> (<a href="#transfer-status-message" class="auto internal xref">Section 5</a>)</span>, carrying the Correlator of the object and a Status Code describing its disposition, on any Associated Channel on which it is the sender.  On receipt, the original sending node can cancel any in-progress Transfer of the identified object, cease emitting further repetitions of any Message associated with it, and, depending on the Status Code, refrain from transferring the object to that node again, freeing channel capacity for other Transfers.<a href="#section-3.3-3" class="pilcrow">¶</a></p>
+<p id="section-3.3-4">Reporting completion is particularly valuable when the sender uses generous Message repetition as a defense against loss, as described in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>: in the style of a fountain code, a sender can plan to repeat the Messages of a Transfer until a Transfer Status Message with a Status Code of 'Completed' is received, or a local repetition budget is exhausted.  The absence of a report never obliges a sender to continue transmission: repetition remains bounded by local policy.<a href="#section-3.3-4" class="pilcrow">¶</a></p>
+<p id="section-3.3-5">Status reporting is advisory and opportunistic.  A Transfer Status Message can be lost in transmission, like any other Message, and can be repeated by the emitting node as a defense against loss, following the repetition rules of <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>.  Due to signal propagation delay, a sender might complete a Transfer before a report about it arrives, and a receiver might continue to receive Segments for some time after emitting a report; both are expected behavior, and the semantics of the Transfer Status Message are deliberately idempotent, such that processing a report multiple times, or after the referenced Transfer has completed, causes no harm.<a href="#section-3.3-5" class="pilcrow">¶</a></p>
+<p id="section-3.3-6">Because a Channel can have multiple receiving nodes, a Transfer Status Message is evidence about the state of the single reporting node only.  Whether a sender ceases transmission on a Channel with multiple receiving nodes as a result of a report from one of them is a matter of sender policy.<a href="#section-3.3-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="object-correlator-hint">
+<section id="section-4">
+      <h2 id="name-object-correlator-hint">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-object-correlator-hint" class="section-name selfRef">Object Correlator Hint</a>
+      </h2>
+<p id="section-4-1">The Object Correlator Hint Item is used to attach a Correlator to the object being transferred by the containing Message.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">This Hint Item <span class="bcp14">MAY</span> be included in a Bundle Message, a Transfer Segment Message, or a Transfer End Message.  Receivers <span class="bcp14">SHOULD</span> ignore this Hint Item if encountered in other Message types.<a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">The Hint Item has a Hint Type of 1, and its layout is as follows:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-4-4">
+<pre>
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   Type (1)  |H|    Length     |  ... Correlator ...           :
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre><a href="#section-4-4" class="pilcrow">¶</a>
+</div>
+<span class="break"></span><dl class="dlParallel" id="section-4-5">
+        <dt id="section-4-5.1">Length:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-5.2">
+          <p id="section-4-5.2.1">The length of the <code>Correlator</code> field in octets.  This <span class="bcp14">MUST</span> be at least 1.<a href="#section-4-5.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-4-5.3">Correlator:</dt>
+        <dd style="margin-left: 1.5em" id="section-4-5.4">
+          <p id="section-4-5.4.1">The octets of the Correlator identifying the object being transferred.<a href="#section-4-5.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-4-6">Because Hint Items are carried in Messages that can be lost in transmission, it is <span class="bcp14">RECOMMENDED</span> that a sender include the Object Correlator Hint in every Transfer Segment Message and Transfer End Message of a Transfer, so that a receiver learns the Correlator regardless of which Messages of the Transfer are received.<a href="#section-4-6" class="pilcrow">¶</a></p>
+<p id="section-4-7">All Object Correlator Hints included in the Messages of a single Transfer <span class="bcp14">MUST</span> carry the same Correlator value.<a href="#section-4-7" class="pilcrow">¶</a></p>
+<p id="section-4-8">When included in a Transfer Segment Message or Transfer End Message, the Correlator identifies the object being reassembled from the Segments of the containing Transfer.  When included in a Bundle Message, the Correlator identifies the complete object contained in the Message.  The applicability to Bundle Messages is essential to the generality of the mechanism: an object small enough to fit in a single Link-layer PDU is expected to be transferred as a Bundle Message, and without a Correlator such an object could never be referenced by any feedback mechanism, whether the status reports defined in this document or the acknowledgement semantics anticipated in future documents.<a href="#section-4-8" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="transfer-status-message">
+<section id="section-5">
+      <h2 id="name-transfer-status-message">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-transfer-status-message" class="section-name selfRef">Transfer Status Message</a>
+      </h2>
+<p id="section-5-1">The Transfer Status Message is used by a node to report to the sender of an object, via an Associated Channel, its disposition of the object identified by a Correlator, indicating that continued transmission of the object to the reporting node is unnecessary.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">A Transfer Status Message has a type of 7.  The Message Content field is formatted as follows:<a href="#section-5-2" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-5-3">
+<pre>
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Status Code   |            ... Correlator ...                 :
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+</pre><a href="#section-5-3" class="pilcrow">¶</a>
+</div>
+<span class="break"></span><dl class="dlParallel" id="section-5-4">
+        <dt id="section-5-4.1">Status Code:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-4.2">
+          <p id="section-5-4.2.1">The disposition being reported, encoded as an 8-bit unsigned integer, with values allocated from the "BTPU Transfer Status Codes" IANA registry, see <a href="#iana-considerations" class="auto internal xref">Section 8</a>.<a href="#section-5-4.2.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+<dt id="section-5-4.3">Correlator:</dt>
+        <dd style="margin-left: 1.5em" id="section-5-4.4">
+          <p id="section-5-4.4.1">The Correlator of the object whose status is being reported, with the length calculated as the Message content length excluding the one (1) octet of the Status Code.  The Correlator <span class="bcp14">MUST</span> be at least 1 octet in length, i.e. the total length of the Message <span class="bcp14">MUST</span> be greater than 5 octets.<a href="#section-5-4.4.1" class="pilcrow">¶</a></p>
+</dd>
+      <dd class="break"></dd>
+</dl>
+<p id="section-5-5">The Transfer Status Message is not a Transfer Message: it carries no Transfer number, and is not subject to the Transfer Window of the Channel on which it is emitted.<a href="#section-5-5" class="pilcrow">¶</a></p>
+<p id="section-5-6">The following Status Codes are defined by this document: <span class="cref" id="_1">The initial Status Code list is loosely aligned with the XFER_REFUSE reason codes of RFC 9174, with 'Completed' recast as a positive report, minus those codes that only make sense with sessions or segment-level acknowledgement. The list needs discussing by the WG.</span><a href="#section-5-6" class="pilcrow">¶</a></p>
+<span id="name-transfer-status-codes"></span><div id="tab-status-codes">
+<table class="left" id="table-1">
+        <caption>
+<a href="#table-1" class="selfRef">Table 1</a>:
+<a href="#name-transfer-status-codes" class="selfRef">Transfer Status Codes</a>
+        </caption>
+<thead>
+          <tr>
+            <th class="text-center" rowspan="1" colspan="1">Code</th>
+            <th class="text-left" rowspan="1" colspan="1">Name</th>
+            <th class="text-left" rowspan="1" colspan="1">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-center" rowspan="1" colspan="1">0</td>
+            <td class="text-left" rowspan="1" colspan="1">Unspecified</td>
+            <td class="text-left" rowspan="1" colspan="1">Continued transfer is unnecessary; no further information is available</td>
+          </tr>
+          <tr>
+            <td class="text-center" rowspan="1" colspan="1">1</td>
+            <td class="text-left" rowspan="1" colspan="1">Completed</td>
+            <td class="text-left" rowspan="1" colspan="1">The reporting node holds a complete copy of the object</td>
+          </tr>
+          <tr>
+            <td class="text-center" rowspan="1" colspan="1">2</td>
+            <td class="text-left" rowspan="1" colspan="1">No Resources</td>
+            <td class="text-left" rowspan="1" colspan="1">The reporting node currently lacks the resources to store the object</td>
+          </tr>
+          <tr>
+            <td class="text-center" rowspan="1" colspan="1">3</td>
+            <td class="text-left" rowspan="1" colspan="1">Not Acceptable</td>
+            <td class="text-left" rowspan="1" colspan="1">The reporting node will not accept the object</td>
+          </tr>
+        </tbody>
+      </table>
+</div>
+<div id="emitting-status-reports">
+<section id="section-5.1">
+        <h3 id="name-emitting-status-reports">
+<a href="#section-5.1" class="section-number selfRef">5.1. </a><a href="#name-emitting-status-reports" class="section-name selfRef">Emitting Status Reports</a>
+        </h3>
+<p id="section-5.1-1">A node <span class="bcp14">MAY</span> emit a Transfer Status Message when it holds a Correlator, learned from a received Object Correlator Hint, for an object whose continued transmission is unnecessary.  This includes a node that has itself just completed reassembly of the object, or received it complete in a Bundle Message: emitting a Transfer Status Message with a Status Code of 'Completed' informs the sender that any further repetition is unnecessary.  The Message is emitted on any Associated Channel on which the reporting node is the sender.<a href="#section-5.1-1" class="pilcrow">¶</a></p>
+<p id="section-5.1-2">As with any Message, a Transfer Status Message <span class="bcp14">MAY</span> be repeated as a defense against loss, following the repetition rules of <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>.<a href="#section-5.1-2" class="pilcrow">¶</a></p>
+<p id="section-5.1-3">The emission of Transfer Status Messages is never required: a node that never emits them is indistinguishable from a node that does not implement this extension.<a href="#section-5.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="processing-status-reports">
+<section id="section-5.2">
+        <h3 id="name-processing-status-reports">
+<a href="#section-5.2" class="section-number selfRef">5.2. </a><a href="#name-processing-status-reports" class="section-name selfRef">Processing Status Reports</a>
+        </h3>
+<p id="section-5.2-1">A node that receives a Transfer Status Message on a Channel compares the carried Correlator against the Correlators of objects it is transferring, or has recently transferred, on all Associated Channels towards the node from which the report was received.<a href="#section-5.2-1" class="pilcrow">¶</a></p>
+<p id="section-5.2-2">If the Correlator matches an in-progress Transfer, the node <span class="bcp14">SHOULD</span> cease emitting further Transfer Segment Messages for that Transfer, and <span class="bcp14">SHOULD</span> emit a Transfer Cancel Message, as defined in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>, on the Channel carrying the Transfer, so that all receiving nodes of that Channel discard any partially reassembled data.  If the Correlator matches an object being emitted as repeated Bundle Messages, the node <span class="bcp14">SHOULD</span> cease emitting further repetitions.  These reactions are the same for every Status Code: each code defined in this document indicates that continued transmission to the reporting node is unnecessary.<a href="#section-5.2-2" class="pilcrow">¶</a></p>
+<p id="section-5.2-3">Whether or not an in-progress Transfer is matched, the node <span class="bcp14">MAY</span> record the report, together with its Status Code, to inform future decisions about transferring the same object to the reporting node; for example, a report with a Status Code of 'Completed' or 'Not Acceptable' suggests the object need never be sent to that node again, whereas 'No Resources' indicates a condition that might be temporary.  The retention and interpretation of recorded reports is a matter of local policy.<a href="#section-5.2-3" class="pilcrow">¶</a></p>
+<p id="section-5.2-4">If the Correlator does not match any object known to the node, the Message <span class="bcp14">MUST</span> be ignored.  Late-arriving reports are expected under long signal propagation delays, and are not an error.<a href="#section-5.2-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="security-considerations">
+<section id="section-6">
+      <h2 id="name-security-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-6-1">The security considerations of <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span> apply to this document.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">BTPU as defined in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span> gives a receiving node no influence over the behavior of a sending node.  This document introduces such an influence: a forged or replayed Transfer Status Message could cause a sender to cancel a Transfer and suppress future Transfers of an object, resulting in a targeted denial of delivery that is not possible with the base protocol.  A forged Status Code of 'Completed' is particularly harmful, as it may additionally cause the sender to believe that the object was successfully delivered.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">To prevent an off-path attacker from forging a plausible report, Correlator values <span class="bcp14">SHOULD NOT</span> be predictable by a third party that has not observed the Messages of a Transfer; a value of at least 8 octets output from a cryptographically secure random number generator is sufficient.  In particular, values derived deterministically from the content of the object, such as a hash of the object, are predictable by any party that holds a copy of the object, and <span class="bcp14">SHOULD NOT</span> be used where forged reports are a concern.<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">An on-path attacker able to observe a Channel can read Correlator values from Object Correlator Hints and subsequently forge reports on a return Channel.  Consistent with <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>, protection against on-path attackers is a matter for link-layer security mechanisms; upper-layer mechanisms such as BPSec <span>[<a href="#RFC9172" class="cite xref">RFC9172</a>]</span> protect the transferred bundles themselves, but cannot protect the Messages of this protocol.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">A sender that records reports to suppress future Transfers <span class="bcp14">SHOULD</span> bound the lifetime of such records, limiting the period during which a replayed or forged report can suppress delivery.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">The use of a constant Correlator value across repeated Transfers of the same object allows an observer of one or more Channels to correlate those Transfers, revealing that the same object is being transferred, even when the object itself is encrypted.  Where this linkability is a concern, link-layer confidentiality mechanisms are required.<a href="#section-6-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="deployment-considerations">
+<section id="section-7">
+      <h2 id="name-deployment-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-deployment-considerations" class="section-name selfRef">Deployment Considerations</a>
+      </h2>
+<p id="section-7-1">In addition to the Deployment Considerations of <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>, which continue to apply to each Channel independently, the following caveats are to be considered before deploying this extension:<a href="#section-7-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-7-2">
+<li id="section-7-2.1">
+          <p id="section-7-2.1.1">All feedback defined in this document is advisory and opportunistic.  Status reports can be lost in transmission; a deployment gains efficiency when they arrive, but correct operation never depends on their delivery.<a href="#section-7-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.2">
+          <p id="section-7-2.2.1">The association of Channels between a pair of nodes requires a-priori configuration.  No in-band discovery or negotiation mechanism is defined.<a href="#section-7-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-7-2.3">
+          <p id="section-7-2.3.1">In mixed deployments, nodes not implementing this extension will encounter the Object Correlator Hint and Transfer Status Message as unrecognized Hint and Message types, and handle them accordingly, as specified in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>.<a href="#section-7-2.3.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-8">
+      <h2 id="name-iana-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="btpu-message-types">
+<section id="section-8.1">
+        <h3 id="name-btpu-message-types">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-btpu-message-types" class="section-name selfRef">BTPU Message Types</a>
+        </h3>
+<p id="section-8.1-1">IANA is requested to allocate the following value in the "BTPU Message Types" registry, defined in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>:<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<span id="name-additional-btpu-message-typ"></span><div id="tab-message-types">
+<table class="left" id="table-2">
+          <caption>
+<a href="#table-2" class="selfRef">Table 2</a>:
+<a href="#name-additional-btpu-message-typ" class="selfRef">Additional BTPU Message Type</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-center" rowspan="1" colspan="1">Type</th>
+              <th class="text-left" rowspan="1" colspan="1">Message</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-center" rowspan="1" colspan="1">7</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span><a href="#transfer-status-message" class="internal xref">Transfer Status Message</a> (<a href="#transfer-status-message" class="auto internal xref">Section 5</a>)</span>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+</section>
+</div>
+<div id="btpu-hint-types">
+<section id="section-8.2">
+        <h3 id="name-btpu-hint-types">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-btpu-hint-types" class="section-name selfRef">BTPU Hint Types</a>
+        </h3>
+<p id="section-8.2-1">IANA is requested to allocate the following value in the "BTPU Hint Types" registry, defined in <span>[<a href="#I-D.ietf-dtn-btpu" class="cite xref">I-D.ietf-dtn-btpu</a>]</span>:<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<span id="name-additional-btpu-hint-type"></span><div id="tab-hint-types">
+<table class="left" id="table-3">
+          <caption>
+<a href="#table-3" class="selfRef">Table 3</a>:
+<a href="#name-additional-btpu-hint-type" class="selfRef">Additional BTPU Hint Type</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-center" rowspan="1" colspan="1">Type</th>
+              <th class="text-left" rowspan="1" colspan="1">Hint</th>
+              <th class="text-left" rowspan="1" colspan="1">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-center" rowspan="1" colspan="1">1</td>
+              <td class="text-left" rowspan="1" colspan="1">
+                <span><a href="#object-correlator-hint" class="internal xref">Object Correlator</a> (<a href="#object-correlator-hint" class="auto internal xref">Section 4</a>)</span>
+</td>
+              <td class="text-left" rowspan="1" colspan="1">This document</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+<p id="section-8.2-3">The Message types to which the Object Correlator Hint is applicable, and receiver behavior for other Message types, are specified in <a href="#object-correlator-hint" class="auto internal xref">Section 4</a>.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="btpu-transfer-status-codes-registry">
+<section id="section-8.3">
+        <h3 id="name-btpu-transfer-status-codes-">
+<a href="#section-8.3" class="section-number selfRef">8.3. </a><a href="#name-btpu-transfer-status-codes-" class="section-name selfRef">BTPU Transfer Status Codes Registry</a>
+        </h3>
+<p id="section-8.3-1">IANA is requested to create a new registry entitled "BTPU Transfer Status Codes", in the existing "Bundle Protocol" registry group.  The registration procedures for this registry, using terms defined in <span>[<a href="#RFC8126" class="cite xref">RFC8126</a>]</span>, is:<a href="#section-8.3-1" class="pilcrow">¶</a></p>
+<span id="name-btpu-transfer-status-codes-r"></span><div id="tab-status-codes-reg">
+<table class="left" id="table-4">
+          <caption>
+<a href="#table-4" class="selfRef">Table 4</a>:
+<a href="#name-btpu-transfer-status-codes-r" class="selfRef">BTPU Transfer Status Codes registration policies</a>
+          </caption>
+<thead>
+            <tr>
+              <th class="text-center" rowspan="1" colspan="1">Values</th>
+              <th class="text-left" rowspan="1" colspan="1">Registration Procedure</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-center" rowspan="1" colspan="1">0..0x6F</td>
+              <td class="text-left" rowspan="1" colspan="1">Standards Action</td>
+            </tr>
+            <tr>
+              <td class="text-center" rowspan="1" colspan="1">0x70..0x7F</td>
+              <td class="text-left" rowspan="1" colspan="1">Private Use</td>
+            </tr>
+            <tr>
+              <td class="text-center" rowspan="1" colspan="1">0x80..0xFF</td>
+              <td class="text-left" rowspan="1" colspan="1">Reserved for future expansion</td>
+            </tr>
+          </tbody>
+        </table>
+</div>
+<p id="section-8.3-3">The initial values for the registry are given in <a href="#tab-status-codes" class="auto internal xref">Table 1</a>.<a href="#section-8.3-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-9">
+      <h2 id="name-references">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-9.1">
+        <h3 id="name-normative-references">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="I-D.ietf-dtn-btpu">[I-D.ietf-dtn-btpu]</dt>
+        <dd>
+<span class="refAuthor">Taylor, R.</span>, <span class="refTitle">"Bundle Transfer Protocol - Unidirectional"</span>, <span class="refContent">Work in Progress</span>, <span class="seriesInfo">Internet-Draft, draft-ietf-dtn-btpu-04</span>, <time datetime="2026-09-07" class="refDate">7 September 2026</time>, <span>&lt;<a href="https://datatracker.ietf.org/doc/html/draft-ietf-dtn-btpu-04">https://datatracker.ietf.org/doc/html/draft-ietf-dtn-btpu-04</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8126">[RFC8126]</dt>
+        <dd>
+<span class="refAuthor">Cotton, M.</span>, <span class="refAuthor">Leiba, B.</span>, and <span class="refAuthor">T. Narten</span>, <span class="refTitle">"Guidelines for Writing an IANA Considerations Section in RFCs"</span>, <span class="seriesInfo">BCP 26</span>, <span class="seriesInfo">RFC 8126</span>, <span class="seriesInfo">DOI 10.17487/RFC8126</span>, <time datetime="2017-06" class="refDate">June 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8126">https://www.rfc-editor.org/rfc/rfc8126</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-9.2">
+        <h3 id="name-informative-references">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC9110">[RFC9110]</dt>
+        <dd>
+<span class="refAuthor">Fielding, R., Ed.</span>, <span class="refAuthor">Nottingham, M., Ed.</span>, and <span class="refAuthor">J. Reschke, Ed.</span>, <span class="refTitle">"HTTP Semantics"</span>, <span class="seriesInfo">STD 97</span>, <span class="seriesInfo">RFC 9110</span>, <span class="seriesInfo">DOI 10.17487/RFC9110</span>, <time datetime="2022-06" class="refDate">June 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9110">https://www.rfc-editor.org/rfc/rfc9110</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9171">[RFC9171]</dt>
+        <dd>
+<span class="refAuthor">Burleigh, S.</span>, <span class="refAuthor">Fall, K.</span>, and <span class="refAuthor">E. Birrane, III</span>, <span class="refTitle">"Bundle Protocol Version 7"</span>, <span class="seriesInfo">RFC 9171</span>, <span class="seriesInfo">DOI 10.17487/RFC9171</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9171">https://www.rfc-editor.org/rfc/rfc9171</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9172">[RFC9172]</dt>
+        <dd>
+<span class="refAuthor">Birrane, III, E.</span> and <span class="refAuthor">K. McKeever</span>, <span class="refTitle">"Bundle Protocol Security (BPSec)"</span>, <span class="seriesInfo">RFC 9172</span>, <span class="seriesInfo">DOI 10.17487/RFC9172</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9172">https://www.rfc-editor.org/rfc/rfc9172</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC9174">[RFC9174]</dt>
+      <dd>
+<span class="refAuthor">Sipos, B.</span>, <span class="refAuthor">Demmer, M.</span>, <span class="refAuthor">Ott, J.</span>, and <span class="refAuthor">S. Perreault</span>, <span class="refTitle">"Delay-Tolerant Networking TCP Convergence-Layer Protocol Version 4"</span>, <span class="seriesInfo">RFC 9174</span>, <span class="seriesInfo">DOI 10.17487/RFC9174</span>, <time datetime="2022-01" class="refDate">January 2022</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc9174">https://www.rfc-editor.org/rfc/rfc9174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="examples">
+<section id="appendix-A">
+      <h2 id="name-examples">
+<a href="#appendix-A" class="section-number selfRef">Appendix A. </a><a href="#name-examples" class="section-name selfRef">Examples</a>
+      </h2>
+<div id="suppression-of-an-in-progress-transfer">
+<section id="appendix-A.1">
+        <h3 id="name-suppression-of-an-in-progre">
+<a href="#appendix-A.1" class="section-number selfRef">A.1. </a><a href="#name-suppression-of-an-in-progre" class="section-name selfRef">Suppression of an in-progress Transfer</a>
+        </h3>
+<p id="appendix-A.1-1">An example of the suppression of an in-progress Transfer between two nodes connected by one Channel in each direction is shown in <a href="#fig-suppression" class="auto internal xref">Figure 1</a>.  Node A is transferring a large Bundle, identified by Correlator c1, to Node B as Transfer 7 on Channel X.  Node B already holds a complete copy of the Bundle, received earlier via another route.<a href="#appendix-A.1-1" class="pilcrow">¶</a></p>
+<span id="name-suppression-of-an-in-progres"></span><div id="fig-suppression">
+<figure id="figure-1">
+          <div class="alignLeft art-text artwork" id="appendix-A.1-2.1">
+<pre>
+Node A                                                Node B
+   |                                                     |
+   |  Channel X (A to B)                                 |
+   |  Channel Y (B to A)                                 |
+   |                                                     |
+   | TSeg(T=7, S=0) + Correlator(c1) ------------------&gt; |
+   | TSeg(T=7, S=1) + Correlator(c1) ------------------&gt; |
+   |                                                     |
+   |                &lt;---------- Status(Completed, c1)    |
+   |                                                     |
+   | TSeg(T=7, S=2) + Correlator(c1) ------------------&gt; |
+   |                                                     |
+   | TCancel(T=7) -------------------------------------&gt; |
+   |                                                     |
+</pre>
+</div>
+<figcaption><a href="#figure-1" class="selfRef">Figure 1</a>:
+<a href="#name-suppression-of-an-in-progres" class="selfRef">Suppression of an in-progress Transfer</a>
+          </figcaption></figure>
+</div>
+<p id="appendix-A.1-3">On receipt of the first Transfer Segment Message, Node B learns from the Object Correlator Hint that Transfer 7 carries the object identified by Correlator c1, recognizes that it already holds a complete copy, and emits a Transfer Status Message with Status Code 'Completed' on Channel Y.  Due to the signal propagation delay, Node A emits a further Segment before the report arrives; this is expected behavior.  On receipt of the report, Node A ceases emitting Segments of Transfer 7, emits a Transfer Cancel Message on Channel X, and uses the reclaimed capacity of Channel X for other Transfers.  Node A records that Node B holds the object identified by c1, and does not offer it to Node B again.<a href="#appendix-A.1-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-B">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-B-1">The status reporting semantics defined in this document draw on the XFER_REFUSE and XFER_ACK mechanisms of the TCP Convergence-Layer Protocol Version 4 <span>[<a href="#RFC9174" class="cite xref">RFC9174</a>]</span>.<a href="#appendix-B-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-C">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">Rick Taylor</span></div>
+<div dir="auto" class="left"><span class="org">Aalyria Technologies</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:rtaylor@aalyria.com" class="email">rtaylor@aalyria.com</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
