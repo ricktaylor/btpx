@@ -151,7 +151,7 @@ When included in a Transfer Segment Message or Transfer End Message, the Correla
 
 The Transfer Status Message is used by a node to report to the sender of an object, via an Associated Channel, its disposition of the object identified by a Correlator, indicating that continued transmission of the object to the reporting node is unnecessary.
 
-A Transfer Status Message has a type of 7.  The Message Content field is formatted as follows:
+A Transfer Status Message has a type of TBD1.  The Message Content field is formatted as follows:
 
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -223,11 +223,11 @@ In addition to the Deployment Considerations of {{!I-D.ietf-dtn-btpu}}, which co
 
 ## BTPU Message Types
 
-IANA is requested to allocate the following value in the "BTPU Message Types" registry, defined in {{!I-D.ietf-dtn-btpu}}:
+IANA is requested to assign a new value from the "BTPU Message Types" registry, defined in {{!I-D.ietf-dtn-btpu}}, for the new Message type defined in this document:
 
 | Type | Message | Reference |
 |:------:|:-----|:------|
-| 7 | [Transfer Status Message](#transfer-status-message) | This document |
+| TBD1 | [Transfer Status Message](#transfer-status-message) | This document |
 {: #tab-message-types align="left" title="Additional BTPU Message Type"}
 
 ## BTPU Hint Types
