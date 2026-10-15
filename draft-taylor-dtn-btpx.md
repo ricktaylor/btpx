@@ -57,7 +57,7 @@ However, many deployments of unidirectional link-layer protocols are not unidire
 
 This document defines the Bundle Transfer Protocol - Cross-Link (BTPX), the minimal machinery required for such cross-linking:
 
-- [Transfer References](#transfer-references), which identify a Transfer on any Associated Channel by the Session ID and Transfer number assigned by its sender, without requiring any additional information to be carried in the Messages of the Transfer, and [Bundle References](#bundle-references), which identify a Bundle Message by a Bundle Number carried in the optional [Bundle Number Hint](#bundle-number-hint).
+- [Transfer References](#transfer-references), which identify a Transfer on any Associated Channel by the Session ID and Transfer number assigned by its sender, without requiring any additional information to be carried in the Messages of the Transfer, and [Bundle References](#bundle-references), which identify a Bundle Message by a Bundle Message ID carried in the optional [Bundle Message ID Hint](#bundle-message-id-hint).
 - The [Transfer Status Message](#transfer-status-message), which allows a node receiving an object to report to the sending node that continued transfer of the object is unnecessary, and why.
 
 The reference mechanism is intentionally more general than the single application defined in this document: future documents can define further feedback semantics, such as selective or negative acknowledgement, built on the same References.  This document deliberately defines no segment-level acknowledgement or retransmission: a Transfer Status Message reports the disposition of a whole object, which allows a sender to suppress unnecessary transmission, and informs its upper layer of the reason, but places no obligation on a sender to retransmit an object.
@@ -79,7 +79,7 @@ Transfer Reference:
 : The combination of the Session ID of a Session and a Transfer number, which together identify a single Transfer sent by a node, see [](#transfer-references).
 
 Bundle Reference:
-: The combination of the Session ID of a Session and a Bundle Number, which together identify a single Bundle Message sent by a node, see [](#bundle-references).
+: The combination of the Session ID of a Session and a Bundle Message ID, which together identify a single Bundle Message sent by a node, see [](#bundle-references).
 
 Reference:
 : A Transfer Reference or a Bundle Reference.
@@ -107,15 +107,15 @@ A Transfer Reference identifies a Transfer, not the object transferred: if the s
 
 ## Bundle References {#bundle-references}
 
-A Bundle Message, as defined in {{!I-D.ietf-dtn-btpu}}, carries no Transfer number.  A sender that wishes to receive reports about an object transferred in a Bundle Message includes a [Bundle Number Hint](#bundle-number-hint) in the Bundle Message, carrying a Bundle Number which, together with the Session ID of the current Session, forms a Bundle Reference.  The Bundle Number Hint is optional, and need only be included when the sender wishes to receive reports about the object.  A sender MUST NOT emit a Bundle Message carrying a Bundle Number Hint before the Session Start Message of the Session.
+A Bundle Message, as defined in {{!I-D.ietf-dtn-btpu}}, carries no Transfer number.  A sender that wishes to receive reports about an object transferred in a Bundle Message includes a [Bundle Message ID Hint](#bundle-message-id-hint) in the Bundle Message, carrying a Bundle Message ID which, together with the Session ID of the current Session, forms a Bundle Reference.  The Bundle Message ID Hint is optional, and need only be included when the sender wishes to receive reports about the object.  A sender MUST NOT emit a Bundle Message carrying a Bundle Message ID Hint before the Session Start Message of the Session.
 
-Bundle Numbers form a number space separate from that of Transfer numbers, and are not subject to the Transfer Window: assigning a Bundle Number does not consume a Transfer number, so that the emission of Bundle Messages does not cause the Transfer Windows of receivers to advance, cancelling Transfers in progress.  A sender assigns Bundle Numbers sequentially within a Session, starting from any value, and incrementing by one, modulo 2^32, for each Bundle Message carrying a Bundle Number Hint; repetitions of a Bundle Message are exact copies, and so carry the same Bundle Number.  As for Transfer References, a sender that discards its records before a Bundle Number recurs never finds a Bundle Reference ambiguous.
+Bundle Message IDs form a number space separate from that of Transfer numbers, and are not subject to the Transfer Window: assigning a Bundle Message ID does not consume a Transfer number, so that the emission of Bundle Messages does not cause the Transfer Windows of receivers to advance, cancelling Transfers in progress.  A sender assigns Bundle Message IDs sequentially within a Session, starting from any value, and incrementing by one, modulo 2^32, for each Bundle Message carrying a Bundle Message ID Hint; repetitions of a Bundle Message are exact copies, and so carry the same Bundle Message ID.  As for Transfer References, a sender that discards its records before a Bundle Message ID recurs never finds a Bundle Reference ambiguous.
 
 A receiving node learns the Session ID of a Channel from its Session Start Message, and so cannot form a Bundle Reference for a Bundle Message received while it has no current Session.
 
 ## Reporting Transfer Status {#reporting-status}
 
-When a node receives the Messages of a Transfer, or a Bundle Message carrying a Bundle Number Hint, it might determine that continued transmission of the object is unnecessary, for example:
+When a node receives the Messages of a Transfer, or a Bundle Message carrying a Bundle Message ID Hint, it might determine that continued transmission of the object is unnecessary, for example:
 
 - The node has received the complete object, or already holds a copy, perhaps received via another route.  When the object is a BPv7 bundle, its primary block, which identifies the bundle, is normally contained in the first Segment, allowing an existing copy to be recognized early in a Transfer.
 - The node has insufficient resources to receive the object.
@@ -129,9 +129,9 @@ Status reporting is advisory and opportunistic.  A Transfer Status Message can b
 
 Because a Channel can have multiple receiving nodes, a Transfer Status Message is evidence about the state of the single reporting node only.  Whether a sender ceases transmission on a Channel with multiple receiving nodes as a result of a report from one of them is a matter of sender policy.
 
-# Bundle Number Hint {#bundle-number-hint}
+# Bundle Message ID Hint {#bundle-message-id-hint}
 
-The Bundle Number Hint Item is used to assign a Bundle Number to the object transferred in a Bundle Message, so that the object can be referenced by a [Bundle Reference](#bundle-references).
+The Bundle Message ID Hint Item is used to assign a Bundle Message ID to the containing Bundle Message, so that the object it carries can be referenced by a [Bundle Reference](#bundle-references).
 
 This Hint Item is valid in Bundle Messages.
 
@@ -140,16 +140,16 @@ The Hint Item has a Hint Type of TBD2, and its layout is as follows:
      0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    | Type (TBD2) |H|     Length    |         Bundle Number         :
+    | Type (TBD2) |H|     Length    |       Bundle Message ID       :
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     :          (continued)          |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 Length:
-: The length of the `Bundle Number` field.  This MUST be 4.
+: The length of the `Bundle Message ID` field.  This MUST be 4.
 
-Bundle Number:
-: The Bundle Number assigned to the object, encoded as a 32-bit unsigned integer in network byte order.
+Bundle Message ID:
+: The Bundle Message ID assigned to the containing Bundle Message, encoded as a 32-bit unsigned integer in network byte order.
 
 # Transfer Status Message {#transfer-status-message}
 
@@ -171,7 +171,7 @@ Session ID:
 : The Session ID of the Session in which the referenced Transfer or Bundle Message was sent, encoded as a 32-bit unsigned integer in network byte order.
 
 Number:
-: The Transfer number of the referenced Transfer, or the Bundle Number of the referenced Bundle Message, according to the Reference Type, encoded as a 32-bit unsigned integer in network byte order.
+: The Transfer number of the referenced Transfer, or the Bundle Message ID of the referenced Bundle Message, according to the Reference Type, encoded as a 32-bit unsigned integer in network byte order.
 
 Reference Type:
 : The kind of Reference carried, encoded as an 8-bit unsigned integer: 0 for a [Transfer Reference](#transfer-references), or 1 for a [Bundle Reference](#bundle-references).  Other values are reserved for future documents.
@@ -213,7 +213,7 @@ Not Acceptable:
 
 ## Emitting Status Reports
 
-A node MAY emit a Transfer Status Message about any Transfer of which it has received Messages, or any Bundle Message carrying a Bundle Number Hint that it has received, when continued transmission of the object is unnecessary.  In particular, emitting a Transfer Status Message with a Status Code of 'Completed' as soon as an object is complete informs the sender that any further repetition is unnecessary.  The Message is emitted on any Associated Channel on which the reporting node is the sender.
+A node MAY emit a Transfer Status Message about any Transfer of which it has received Messages, or any Bundle Message carrying a Bundle Message ID Hint that it has received, when continued transmission of the object is unnecessary.  In particular, emitting a Transfer Status Message with a Status Code of 'Completed' as soon as an object is complete informs the sender that any further repetition is unnecessary.  The Message is emitted on any Associated Channel on which the reporting node is the sender.
 
 As with any Message, a Transfer Status Message MAY be repeated as a defense against loss, following the repetition rules of {{!I-D.ietf-dtn-btpu}}.
 
@@ -237,9 +237,9 @@ The security considerations of {{!I-D.ietf-dtn-btpu}} apply to this document.
 
 BTPU as defined in {{!I-D.ietf-dtn-btpu}} gives a receiving node no influence over the behavior of a sending node.  This document introduces such an influence: a forged or replayed Transfer Status Message could cause a sender to cancel a Transfer and suppress future Transfers of an object, resulting in a targeted denial of delivery that is not possible with the base protocol.  A forged Status Code of 'Completed' is particularly harmful, as it may additionally cause the sender to believe that the object was completely received.
 
-To forge a plausible report, an attacker needs a Reference that the sender will recognize.  Transfer numbers and Bundle Numbers are sequential, and hence predictable, but the Session ID is chosen at random by the sender, as described in {{!I-D.ietf-dtn-btpu}}, so an off-path attacker that has not observed a Channel would need to guess a 32-bit value.  This is not intended to provide cryptographic protection: where the forgery of reports by an off-path attacker is a concern, deployments rely on link-layer mechanisms to prevent the injection of Link-layer PDUs, as they do for the other Messages of {{!I-D.ietf-dtn-btpu}}.
+To forge a plausible report, an attacker needs a Reference that the sender will recognize.  Transfer numbers and Bundle Message IDs are sequential, and hence predictable, but the Session ID is chosen at random by the sender, as described in {{!I-D.ietf-dtn-btpu}}, so an off-path attacker that has not observed a Channel would need to guess a 32-bit value.  This is not intended to provide cryptographic protection: where the forgery of reports by an off-path attacker is a concern, deployments rely on link-layer mechanisms to prevent the injection of Link-layer PDUs, as they do for the other Messages of {{!I-D.ietf-dtn-btpu}}.
 
-An on-path attacker able to observe a Channel can learn its Session ID, Transfer numbers, and Bundle Numbers, and subsequently forge reports on a return Channel.  Consistent with {{!I-D.ietf-dtn-btpu}}, protection against on-path attackers is a matter for link-layer security mechanisms; upper-layer mechanisms such as BPSec {{?RFC9172}} protect the transferred bundles themselves, but cannot protect the Messages of this protocol.
+An on-path attacker able to observe a Channel can learn its Session ID, Transfer numbers, and Bundle Message IDs, and subsequently forge reports on a return Channel.  Consistent with {{!I-D.ietf-dtn-btpu}}, protection against on-path attackers is a matter for link-layer security mechanisms; upper-layer mechanisms such as BPSec {{?RFC9172}} protect the transferred bundles themselves, but cannot protect the Messages of this protocol.
 
 A sender that records reports to suppress future Transfers SHOULD bound the lifetime of such records, limiting the period during which a replayed or forged report can suppress delivery.
 
@@ -251,7 +251,7 @@ In addition to the Deployment Considerations of {{!I-D.ietf-dtn-btpu}}, which co
 
 1. The association of Channels between a pair of nodes requires a-priori configuration.  No in-band discovery or negotiation mechanism is defined.
 
-1. In mixed deployments, nodes not implementing this extension will encounter the Transfer Status Message and the Bundle Number Hint as unrecognized Message and Hint types, and handle them accordingly, as specified in {{!I-D.ietf-dtn-btpu}}.
+1. In mixed deployments, nodes not implementing this extension will encounter the Transfer Status Message and the Bundle Message ID Hint as unrecognized Message and Hint types, and handle them accordingly, as specified in {{!I-D.ietf-dtn-btpu}}.
 
 # IANA Considerations
 
@@ -270,10 +270,10 @@ IANA is requested to assign a new value from the "BTPU Hint Types" registry, def
 
 | Type | Hint | Reference |
 |:------:|:-----|:------|
-| TBD2 | [Bundle Number](#bundle-number-hint) | This document |
+| TBD2 | [Bundle Message ID](#bundle-message-id-hint) | This document |
 {: #tab-hint-types align="left" title="Additional BTPU Hint Type"}
 
-The Message types in which the Bundle Number Hint is valid are specified in [](#bundle-number-hint).
+The Message types in which the Bundle Message ID Hint is valid are specified in [](#bundle-message-id-hint).
 
 ## BTPU Transfer Status Codes Registry
 
