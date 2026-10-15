@@ -259,7 +259,8 @@ Table of Contents
    Bundle Reference.  The Bundle Message ID Hint is optional, and need
    only be included when the sender wishes to receive reports about the
    object.  A sender MUST NOT emit a Bundle Message carrying a Bundle
-   Message ID Hint before the Session Start Message of the Session.
+   Message ID Hint before the Session Start Message of the Session, or
+   after its Session End Message.
 
    Bundle Message IDs form a number space separate from that of Transfer
    numbers, and are not subject to the Transfer Window: assigning a
@@ -407,8 +408,7 @@ Table of Contents
    The following Status Codes are defined by this document:
    // The initial Status Codes draw on the transfer refusal reason codes
    // of RFC 9174, but are defined independently.  Whether further
-   // Status Codes are needed, for example to report that a receiving
-   // node is about to stop receiving, needs discussing by the WG.
+   // Status Codes are needed needs discussing by the WG.
 
    +======+=============+==========+==============================+
    | Code | Name        | Transfer | Description                  |
@@ -574,7 +574,11 @@ Table of Contents
        a-priori configuration.  No in-band discovery or negotiation
        mechanism is defined.
 
-   3.  In mixed deployments, nodes not implementing this extension will
+   3.  It does not signal whether a receiving node is present on, or
+       receiving, a Channel.  Deployments are expected to learn this
+       from the link layer, from contact plans, or by other means.
+
+   4.  In mixed deployments, nodes not implementing this extension will
        encounter the Transfer Status Message and the Bundle Message ID
        Hint as unrecognized Message and Hint types, and handle them
        accordingly, as specified in [I-D.ietf-dtn-btpu].
