@@ -1,0 +1,735 @@
+
+
+
+
+Delay/Disruption Tolerant Networking                           R. Taylor
+Internet-Draft                                      Aalyria Technologies
+Intended status: Standards Track                         15 October 2026
+Expires: 18 April 2027
+
+
+                 Bundle Transfer Protocol - Cross-Link
+                      draft-taylor-dtn-btpx-latest
+
+Abstract
+
+   The Bundle Transfer Protocol - Unidirectional (BTPU) provides for the
+   transfer of large binary objects, typically Bundle Protocol version 7
+   bundles, over a unidirectional, unreliable, frame-based link-layer
+   protocol, and by design includes no return path.
+
+   This document defines the Bundle Transfer Protocol - Cross-Link
+   (BTPX), an extension to BTPU for deployments where independent BTPU
+   channels exist in both directions between a pair of nodes.  It
+   defines how a Transfer or a Bundle Message on one channel is
+   referenced from another, and a first application of such references,
+   the Transfer Status Message, which allows a receiver to indicate to a
+   sender that continued transfer of an object is unnecessary, and why.
+
+   This document defines no segment-level acknowledgement or
+   retransmission semantics; such mechanisms are deferred to future
+   documents.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://ricktaylor.github.io/btpx/draft-taylor-dtn-btpx.html.  Status
+   information for this document may be found at
+   https://datatracker.ietf.org/doc/draft-taylor-dtn-btpx/.
+
+   Discussion of this document takes place on the Delay/Disruption
+   Tolerant Networking Working Group mailing list (mailto:dtn@ietf.org),
+   which is archived at https://mailarchive.ietf.org/arch/browse/dtn/.
+   Subscribe at https://www.ietf.org/mailman/listinfo/dtn/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/ricktaylor/btpx.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 18 April 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Conventions and Definitions
+     2.1.  Terminology
+   3.  Protocol Overview
+     3.1.  Channel Association
+     3.2.  Transfer References
+     3.3.  Bundle References
+     3.4.  Reporting Transfer Status
+   4.  Bundle Message ID Hint
+   5.  Transfer Status Message
+     5.1.  Emitting Status Reports
+     5.2.  Processing Status Reports
+   6.  Security Considerations
+   7.  Deployment Considerations
+   8.  IANA Considerations
+     8.1.  BTPU Message Types
+     8.2.  BTPU Hint Types
+     8.3.  BTPU Transfer Status Codes Registry
+   9.  References
+     9.1.  Normative References
+     9.2.  Informative References
+   Appendix A.  Examples
+     A.1.  Suppression of an in-progress Transfer
+   Acknowledgments
+   Author's Address
+
+1.  Introduction
+
+   The Bundle Transfer Protocol - Unidirectional (BTPU)
+   [I-D.ietf-dtn-btpu] transfers Bundles over unidirectional,
+   unreliable, frame-based link-layer protocols.  Because the underlying
+   link-layer is unidirectional, the protocol includes no in-band return
+   path: loss is handled solely by the repetition of Messages by the
+   sender.
+
+   However, many deployments of unidirectional link-layer protocols are
+   not unidirectional at the system level: pairs of opposing
+   unidirectional channels frequently exist between the same two nodes,
+   for example, a high-rate space downlink paired with a low-rate
+   uplink, and each such channel can carry an independent instance of
+   BTPU.  The Deployment Considerations of [I-D.ietf-dtn-btpu] note that
+   any acknowledgement system designed to provide reliability requires a
+   logically separate path from receiver back to sender.  When such a
+   logically separate path is itself a BTPU channel in the opposing
+   direction, the two channels can be "cross-linked": Messages received
+   on one channel can refer to Transfers occurring on another.
+
+   This document defines the Bundle Transfer Protocol - Cross-Link
+   (BTPX), the minimal machinery required for such cross-linking:
+
+   *  Transfer References (Section 3.2), which identify a Transfer on
+      any Associated Channel by the Session ID and Transfer number
+      assigned by its sender, without requiring any additional
+      information to be carried in the Messages of the Transfer, and
+      Bundle References (Section 3.3), which identify a Bundle Message
+      by a Bundle Message ID carried in the optional Bundle Message ID
+      Hint (Section 4).
+
+   *  The Transfer Status Message (Section 5), which allows a node
+      receiving an object to report to the sending node that continued
+      transfer of the object is unnecessary, and why.
+
+   The reference mechanism is intentionally more general than the single
+   application defined in this document: future documents can define
+   further feedback semantics, such as selective or negative
+   acknowledgement, built on the same References.  This document
+   deliberately defines no segment-level acknowledgement or
+   retransmission: a Transfer Status Message reports the disposition of
+   a whole object, which allows a sender to suppress unnecessary
+   transmission, and informs its upper layer of the reason, but places
+   no obligation on a sender to retransmit an object.
+
+   All feedback enabled by this document is advisory.  A sender that
+   never receives, or chooses to ignore, a Transfer Status Message
+   behaves exactly as a sender conforming to [I-D.ietf-dtn-btpu] alone,
+   and no mechanism in this document places any additional data
+   retention obligation on a sender.
+
+2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+2.1.  Terminology
+
+   This document uses the terms Bundle, Link-layer PDU, Message,
+   Segment, Session, Transfer, Transfer Message, and Transfer Window as
+   defined in [I-D.ietf-dtn-btpu].  Additionally, within the scope of
+   this document, the following terms have specific meaning:
+
+   Channel:  A single instance of the BTPU protocol between one sending
+      node and one or more receiving nodes, operating over a single
+      logical channel of a link-layer protocol, as described in
+      [I-D.ietf-dtn-btpu].
+
+   Transfer Reference:  The combination of the Session ID of a Session
+      and a Transfer number, which together identify a single Transfer
+      sent by a node, see Section 3.2.
+
+   Bundle Reference:  The combination of the Session ID of a Session and
+      a Bundle Message ID, which together identify a single Bundle
+      Message sent by a node, see Section 3.3.
+
+   Reference:  A Transfer Reference or a Bundle Reference.
+
+   Associated Channels:  The set of Channels, in both directions,
+      between a pair of nodes, known to each node by a-priori
+      configuration, see Section 3.1.
+
+3.  Protocol Overview
+
+3.1.  Channel Association
+
+   This extension applies when a pair of nodes is connected by Channels
+   in both directions.  It assumes that a-priori configuration
+   identifies, for each Channel, the node at the far end, and hence
+   which Channels form the set of Associated Channels between a pair of
+   nodes.  No in-band discovery or negotiation mechanism is defined.
+
+   Because a Reference is unambiguous within the scope of the node that
+   sent the referenced Transfer or Bundle Message, see Section 3.2 and
+   Section 3.3, correlation does not depend on which particular Channel
+   carries a Message: any number of Channels in each direction can be
+   associated between a pair of nodes, and a Message received on any
+   Associated Channel can be correlated with a Transfer on any other.
+
+   A Channel carrying Transfer Status Messages is an ordinary BTPU
+   Channel: it can simultaneously carry its own Transfers, with the
+   Transfer Status Messages multiplexed between the Messages of those
+   Transfers in the usual way.  No dedicated feedback channel is
+   required.
+
+3.2.  Transfer References
+
+   A Transfer Reference identifies a Transfer by the Session ID of the
+   Session in which it was sent, as announced in the Session Start
+   Message defined in [I-D.ietf-dtn-btpu], together with its Transfer
+   number.  A receiving node learns both from the Messages of the
+   Channel itself, so no additional information needs to be carried in
+   the Messages of a Transfer for it to be referenced.
+
+   A Transfer number alone is not sufficient: it is meaningful only
+   within a single Session on a single Channel.  The Session ID
+   distinguishes the Sessions of a Channel, for example before and after
+   a sender restart, and a node implementing this extension MUST NOT use
+   the same Session ID for two concurrent Sessions on Channels on which
+   it is the sender, so that the Session ID also distinguishes its
+   Channels.  As a Transfer Reference is only ever interpreted by the
+   node that sent the Transfer, the Session IDs chosen by other nodes
+   are irrelevant.
+
+   A Transfer Reference identifies a Transfer, not the object
+   transferred: if the same object is transferred again, for example on
+   a different Channel, or after an earlier Transfer was cancelled, the
+   new Transfer has a different Transfer Reference.  A sending node that
+   wishes to act on reports about an object, for example to avoid
+   transferring it to the same node again, records the object
+   transferred by each Transfer for as long as it wishes to act on
+   reports about that Transfer.  This retention is a matter of local
+   policy, and is not constrained by the Transfer Window: a report can
+   be acted upon long after the Transfer has left the Transfer Window,
+   provided that the sender has not discarded its record.  A Transfer
+   number recurs within a Session only after a further 2^32 Transfers,
+   so a sender that discards its records before then never finds a
+   Transfer Reference ambiguous.
+
+3.3.  Bundle References
+
+   A Bundle Message, as defined in [I-D.ietf-dtn-btpu], carries no
+   Transfer number.  A sender that wishes to receive reports about an
+   object transferred in a Bundle Message includes a Bundle Message ID
+   Hint (Section 4) in the Bundle Message, carrying a Bundle Message ID
+   which, together with the Session ID of the current Session, forms a
+   Bundle Reference.  The Bundle Message ID Hint is optional, and need
+   only be included when the sender wishes to receive reports about the
+   object.  A sender MUST NOT emit a Bundle Message carrying a Bundle
+   Message ID Hint before the Session Start Message of the Session, or
+   after its Session End Message.
+
+   Bundle Message IDs form a number space separate from that of Transfer
+   numbers, and are not subject to the Transfer Window: assigning a
+   Bundle Message ID does not consume a Transfer number, so that the
+   emission of Bundle Messages does not cause the Transfer Windows of
+   receivers to advance, cancelling Transfers in progress.  A sender
+   assigns Bundle Message IDs sequentially within a Session, starting
+   from any value, and incrementing by one, modulo 2^32, for each Bundle
+   Message carrying a Bundle Message ID Hint; repetitions of a Bundle
+   Message are exact copies, and so carry the same Bundle Message ID.
+   As for Transfer References, a sender that discards its records before
+   a Bundle Message ID recurs never finds a Bundle Reference ambiguous.
+
+   A receiving node learns the Session ID of a Channel from its Session
+   Start Message, and so cannot form a Bundle Reference for a Bundle
+   Message received while it has no current Session.
+
+3.4.  Reporting Transfer Status
+
+   When a node receives the Messages of a Transfer, or a Bundle Message
+   carrying a Bundle Message ID Hint, it might determine that continued
+   transmission of the object is unnecessary, for example:
+
+   *  The node has received the complete object, or already holds a
+      copy, perhaps received via another route.  When the object is a
+      BPv7 bundle, its primary block, which identifies the bundle, is
+      normally contained in the first Segment, allowing an existing copy
+      to be recognized early in a Transfer.
+
+   *  The node has insufficient resources to receive the object.
+
+   *  The node will not accept the object, whether as a matter of
+      policy, for example because it exceeds a size limit, or because
+      the object is invalid.
+
+   In such cases, the receiving node MAY emit a Transfer Status Message
+   (Section 5), carrying the Reference of the Transfer or Bundle Message
+   and a Status Code describing the disposition of its object, on any
+   Associated Channel on which it is the sender.  On receipt, the
+   original sending node can cancel the Transfer if it is still in
+   progress, cease emitting further repetitions of its Messages, and,
+   depending on the Status Code, refrain from transferring the object to
+   that node again, freeing channel capacity for other Transfers.
+
+   Reporting completion is particularly valuable when the sender uses
+   generous Message repetition as a defense against loss, as described
+   in [I-D.ietf-dtn-btpu]: in the style of a fountain code, a sender can
+   plan to repeat the Messages of a Transfer or a Bundle Message until a
+   Transfer Status Message with a Status Code of 'Completed' is
+   received, or a local repetition budget is exhausted.  The absence of
+   a report never obliges a sender to continue transmission: repetition
+   remains bounded by local policy.
+
+   Status reporting is advisory and opportunistic.  A Transfer Status
+   Message can be lost in transmission, like any other Message, and can
+   be repeated by the emitting node as a defense against loss, following
+   the repetition rules of [I-D.ietf-dtn-btpu].  Due to signal
+   propagation delay, a sender might complete a Transfer before a report
+   about it arrives, and a receiver might continue to receive Segments
+   for some time after emitting a report; both are expected behavior,
+   and the semantics of the Transfer Status Message are deliberately
+   idempotent, such that processing a report multiple times, or after
+   the referenced Transfer has completed, causes no harm.
+
+   Because a Channel can have multiple receiving nodes, a Transfer
+   Status Message is evidence about the state of the single reporting
+   node only.  Whether a sender ceases transmission on a Channel with
+   multiple receiving nodes as a result of a report from one of them is
+   a matter of sender policy.
+
+4.  Bundle Message ID Hint
+
+   The Bundle Message ID Hint Item is used to assign a Bundle Message ID
+   to the containing Bundle Message, so that the object it carries can
+   be referenced by a Bundle Reference (Section 3.3).
+
+   This Hint Item is valid in Bundle Messages.
+
+   The Hint Item has a Hint Type of TBD2, and its layout is as follows:
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Type (TBD2) |H|     Length    |       Bundle Message ID       :
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   :          (continued)          |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Length:  The length of the Bundle Message ID field.  This MUST be 4.
+
+   Bundle Message ID:  The Bundle Message ID assigned to the containing
+      Bundle Message, encoded as a 32-bit unsigned integer in network
+      byte order.
+
+5.  Transfer Status Message
+
+   The Transfer Status Message is used by a node to report to the sender
+   of an object, via an Associated Channel, its disposition of the
+   object transferred by the Transfer or Bundle Message identified by a
+   Reference, indicating that continued transmission of the object to
+   the reporting node is unnecessary.
+
+   A Transfer Status Message has a type of TBD1.  The Message Content
+   field is formatted as follows:
+
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Session ID                                                    |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Number                                                        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | Ref. Type     | Status Code   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+   Session ID:  The Session ID of the Session in which the referenced
+      Transfer or Bundle Message was sent, encoded as a 32-bit unsigned
+      integer in network byte order.
+
+   Number:  The Transfer number of the referenced Transfer, or the
+      Bundle Message ID of the referenced Bundle Message, according to
+      the Reference Type, encoded as a 32-bit unsigned integer in
+      network byte order.
+
+   Reference Type:  The kind of Reference carried, encoded as an 8-bit
+      unsigned integer: 0 for a Transfer Reference (Section 3.2), or 1
+      for a Bundle Reference (Section 3.3).  Other values are reserved
+      for future documents.
+
+   Status Code:  The disposition being reported, encoded as an 8-bit
+      unsigned integer, with values allocated from the "BTPU Transfer
+      Status Codes" IANA registry, see Section 8.
+
+   The Message Content of a Transfer Status Message, excluding any Hint
+   Items, is exactly 10 octets in length.  A Transfer Status Message
+   with Message Content of any other length is invalid, as defined in
+   [I-D.ietf-dtn-btpu].
+
+   The Transfer Status Message is not a Transfer Message: although it
+   carries a Transfer number, that number refers to a Transfer on
+   another Channel, and so the Message is subject to neither the
+   Transfer Window nor the Session of the Channel on which it is
+   emitted.
+
+   The following Status Codes are defined by this document:
+   // The initial Status Codes draw on the transfer refusal reason codes
+   // of RFC 9174, but are defined independently.  Whether further
+   // Status Codes are needed needs discussing by the WG.
+
+   +======+=============+==========+==============================+
+   | Code | Name        | Transfer | Description                  |
+   |      |             | Again    |                              |
+   +======+=============+==========+==============================+
+   | 0x00 | Unspecified | May      | No reason is given           |
+   +------+-------------+----------+------------------------------+
+   | 0x01 | No          | May      | The reporting node currently |
+   |      | Resources   |          | lacks the resources to       |
+   |      |             |          | receive the object           |
+   +------+-------------+----------+------------------------------+
+   | 0x80 | Completed   | Should   | The reporting node holds the |
+   |      |             | not      | complete object              |
+   +------+-------------+----------+------------------------------+
+   | 0x81 | Not         | Should   | The reporting node will not  |
+   |      | Acceptable  | not      | accept the object            |
+   +------+-------------+----------+------------------------------+
+
+                    Table 1: Transfer Status Codes
+
+   Every Status Code indicates that the reporting node requires no
+   further transmission of the object; the reaction of a sender to this
+   is described in Section 5.2.  The Status Code additionally indicates
+   why, and is passed to the upper layer of the sending node, typically
+   a bundle protocol agent, as an indication of the disposition of the
+   object.
+
+   The most significant bit of a Status Code indicates whether the
+   object could usefully be transferred to the reporting node again.  If
+   the bit is clear, the condition reported might be temporary, and a
+   sender MAY transfer the object to the reporting node again later.  If
+   the bit is set, a sender SHOULD NOT transfer the same object to the
+   reporting node again.  This applies to every Status Code, including
+   any that a sender does not recognize, so that a sender can act
+   appropriately on Status Codes defined after it was implemented.
+
+   The Status Codes defined in this document have the following
+   meanings:
+
+   Unspecified:  The reporting node requires no further transmission of
+      the object, and gives no reason.
+
+   No Resources:  The reporting node lacks the resources to receive the
+      object at present.  A bundle protocol agent might fragment the
+      bundle before transferring it again.
+
+   Completed:  The reporting node holds the complete object, either
+      because it has received all of it, or because it already held a
+      copy, perhaps received via another route.  A sender MAY consider
+      the object completely received by the reporting node.
+
+   Not Acceptable:  The reporting node will not accept the object,
+      whether as a matter of policy, for example because it exceeds a
+      size limit or is unwanted, or because the object has been found to
+      be invalid, which a further transfer of the same object cannot
+      remedy.
+
+5.1.  Emitting Status Reports
+
+   A node MAY emit a Transfer Status Message about any Transfer of which
+   it has received Messages, or any Bundle Message carrying a Bundle
+   Message ID Hint that it has received, when continued transmission of
+   the object is unnecessary.  In particular, emitting a Transfer Status
+   Message with a Status Code of 'Completed' as soon as an object is
+   complete informs the sender that any further repetition is
+   unnecessary.  The Message is emitted on any Associated Channel on
+   which the reporting node is the sender.
+
+   As with any Message, a Transfer Status Message MAY be repeated as a
+   defense against loss, following the repetition rules of
+   [I-D.ietf-dtn-btpu].
+
+   The emission of Transfer Status Messages is never required: a node
+   that never emits them is indistinguishable from a node that does not
+   implement this extension.
+
+5.2.  Processing Status Reports
+
+   A node that receives a Transfer Status Message on a Channel uses the
+   carried Reference to identify a Transfer or Bundle Message that it is
+   sending, or has recently sent, on any Associated Channel towards the
+   node from which the report was received.  A node MUST ignore a
+   Transfer Status Message carrying a Reference Type that it does not
+   recognize, and MUST NOT consider an object completely received on the
+   basis of a Status Code that it does not recognize.
+
+   If the Reference identifies an in-progress Transfer, the node SHOULD
+   cease emitting further Transfer Segment Messages for that Transfer,
+   and SHOULD emit a Transfer Cancel Message, as defined in
+   [I-D.ietf-dtn-btpu], on the Channel carrying the Transfer, so that
+   all receiving nodes of that Channel discard any partially reassembled
+   data.  If the Reference identifies a Bundle Message, or a Transfer
+   that has been completely emitted, whose Messages are still being
+   repeated, the node SHOULD cease emitting further repetitions.  These
+   reactions are the same for every Status Code: each code defined in
+   this document indicates that continued transmission to the reporting
+   node is unnecessary.
+
+   Beyond ceasing transmission, the behavior of a node on receipt of
+   each Status Code is as described in Section 5.  The absence of a
+   report is not evidence that an object was not received, as the report
+   might have been lost.
+
+   The node MAY record the report against the object transferred,
+   together with its Status Code, to inform future decisions about
+   transferring the same object to the reporting node.  The retention
+   and interpretation of recorded reports is a matter of local policy.
+
+   If the Reference does not identify a Transfer or Bundle Message for
+   which the node holds a record, the Message MUST be ignored.  Late-
+   arriving reports are expected under long signal propagation delays,
+   and are not an error.
+
+6.  Security Considerations
+
+   The security considerations of [I-D.ietf-dtn-btpu] apply to this
+   document.
+
+   BTPU as defined in [I-D.ietf-dtn-btpu] gives a receiving node no
+   influence over the behavior of a sending node.  This document
+   introduces such an influence: a forged or replayed Transfer Status
+   Message could cause a sender to cancel a Transfer and suppress future
+   Transfers of an object, resulting in a targeted denial of delivery
+   that is not possible with the base protocol.  A forged Status Code of
+   'Completed' is particularly harmful, as it may additionally cause the
+   sender to believe that the object was completely received.
+
+   To forge a plausible report, an attacker needs a Reference that the
+   sender will recognize.  Transfer numbers and Bundle Message IDs are
+   sequential, and hence predictable, but the Session ID is chosen at
+   random by the sender, as described in [I-D.ietf-dtn-btpu], so an off-
+   path attacker that has not observed a Channel would need to guess a
+   32-bit value.  This is not intended to provide cryptographic
+   protection: where the forgery of reports by an off-path attacker is a
+   concern, deployments rely on link-layer mechanisms to prevent the
+   injection of Link-layer PDUs, as they do for the other Messages of
+   [I-D.ietf-dtn-btpu].
+
+   An on-path attacker able to observe a Channel can learn its Session
+   ID, Transfer numbers, and Bundle Message IDs, and subsequently forge
+   reports on a return Channel.  Consistent with [I-D.ietf-dtn-btpu],
+   protection against on-path attackers is a matter for link-layer
+   security mechanisms; upper-layer mechanisms such as BPSec [RFC9172]
+   protect the transferred bundles themselves, but cannot protect the
+   Messages of this protocol.
+
+   A sender that records reports to suppress future Transfers SHOULD
+   bound the lifetime of such records, limiting the period during which
+   a replayed or forged report can suppress delivery.
+
+7.  Deployment Considerations
+
+   In addition to the Deployment Considerations of [I-D.ietf-dtn-btpu],
+   which continue to apply to each Channel independently, the following
+   caveats are to be considered before deploying this extension:
+
+   1.  All feedback defined in this document is advisory and
+       opportunistic.  Status reports can be lost in transmission; a
+       deployment gains efficiency when they arrive, but correct
+       operation never depends on their delivery.
+
+   2.  The association of Channels between a pair of nodes requires
+       a-priori configuration.  No in-band discovery or negotiation
+       mechanism is defined.
+
+   3.  It does not signal whether a receiving node is present on, or
+       receiving, a Channel.  Deployments are expected to learn this
+       from the link layer, from contact plans, or by other means.
+
+   4.  In mixed deployments, nodes not implementing this extension will
+       encounter the Transfer Status Message and the Bundle Message ID
+       Hint as unrecognized Message and Hint types, and handle them
+       accordingly, as specified in [I-D.ietf-dtn-btpu].
+
+8.  IANA Considerations
+
+8.1.  BTPU Message Types
+
+   IANA is requested to assign a new value from the "BTPU Message Types"
+   registry, defined in [I-D.ietf-dtn-btpu], for the new Message type
+   defined in this document:
+
+   +======+=====================================+===============+
+   | Type | Message                             | Reference     |
+   +======+=====================================+===============+
+   | TBD1 | Transfer Status Message (Section 5) | This document |
+   +------+-------------------------------------+---------------+
+
+               Table 2: Additional BTPU Message Type
+
+8.2.  BTPU Hint Types
+
+   IANA is requested to assign a new value from the "BTPU Hint Types"
+   registry, defined in [I-D.ietf-dtn-btpu], for the new Hint type
+   defined in this document:
+
+   +======+===============================+===============+
+   | Type | Hint                          | Reference     |
+   +======+===============================+===============+
+   | TBD2 | Bundle Message ID (Section 4) | This document |
+   +------+-------------------------------+---------------+
+
+              Table 3: Additional BTPU Hint Type
+
+   The Message types in which the Bundle Message ID Hint is valid are
+   specified in Section 4.
+
+8.3.  BTPU Transfer Status Codes Registry
+
+   IANA is requested to create a new registry entitled "BTPU Transfer
+   Status Codes", in the existing "Bundle Protocol" registry group.  The
+   registration procedures for this registry, using terms defined in
+   [RFC8126], is:
+
+   +============+================+========================+
+   |   Values   | Transfer Again | Registration Procedure |
+   +============+================+========================+
+   | 0x00..0x6F | May            | Standards Action       |
+   +------------+----------------+------------------------+
+   | 0x70..0x7F | May            | Private Use            |
+   +------------+----------------+------------------------+
+   | 0x80..0xEF | Should not     | Standards Action       |
+   +------------+----------------+------------------------+
+   | 0xF0..0xFF | Should not     | Private Use            |
+   +------------+----------------+------------------------+
+
+       Table 4: BTPU Transfer Status Codes registration
+                           policies
+
+   The most significant bit of a Status Code indicates whether a sender
+   may transfer the object to the reporting node again, see Section 5.
+   Specifications defining new Status Codes MUST specify whether a
+   sender may transfer the object to the reporting node again, and MUST
+   allocate a value from the corresponding range.
+
+   The initial values for the registry are given in Table 1.
+
+9.  References
+
+9.1.  Normative References
+
+   [I-D.ietf-dtn-btpu]
+              Taylor, R., "Bundle Transfer Protocol - Unidirectional",
+              Work in Progress, Internet-Draft, draft-ietf-dtn-btpu-05,
+              15 October 2026, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-dtn-btpu-05>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8126]  Cotton, M., Leiba, B., and T. Narten, "Guidelines for
+              Writing an IANA Considerations Section in RFCs", BCP 26,
+              RFC 8126, DOI 10.17487/RFC8126, June 2017,
+              <https://www.rfc-editor.org/rfc/rfc8126>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+9.2.  Informative References
+
+   [RFC9172]  Birrane, III, E. and K. McKeever, "Bundle Protocol
+              Security (BPSec)", RFC 9172, DOI 10.17487/RFC9172, January
+              2022, <https://www.rfc-editor.org/rfc/rfc9172>.
+
+   [RFC9174]  Sipos, B., Demmer, M., Ott, J., and S. Perreault, "Delay-
+              Tolerant Networking TCP Convergence-Layer Protocol Version
+              4", RFC 9174, DOI 10.17487/RFC9174, January 2022,
+              <https://www.rfc-editor.org/rfc/rfc9174>.
+
+Appendix A.  Examples
+
+A.1.  Suppression of an in-progress Transfer
+
+   An example of the suppression of an in-progress Transfer between two
+   nodes connected by one Channel in each direction is shown in
+   Figure 1.  Node A is transferring a large Bundle to Node B as
+   Transfer 7 of Session s1 on Channel X, where TSeg(T, I) denotes a
+   Transfer Segment Message for Transfer T with Segment Index I.  Node B
+   already holds a complete copy of the Bundle, received earlier via
+   another route.
+
+   Node A                                                Node B
+      |                                                     |
+      |  Channel X (A to B), Session ID s1                  |
+      |  Channel Y (B to A)                                 |
+      |                                                     |
+      | TSeg(T=7, I=0) -----------------------------------> |
+      | TSeg(T=7, I=1) -----------------------------------> |
+      |                                                     |
+      |           <---------- Status(Completed, s1, T=7)    |
+      |                                                     |
+      | TSeg(T=7, I=2) -----------------------------------> |
+      |                                                     |
+      | TCancel(T=7) -------------------------------------> |
+      |                                                     |
+
+              Figure 1: Suppression of an in-progress Transfer
+
+   On receipt of the first Transfer Segment Message, Node B recognizes
+   from the primary block of the Bundle that it already holds a copy,
+   and emits a Transfer Status Message with Status Code 'Completed',
+   referencing Transfer 7 of Session s1, on Channel Y.  Due to the
+   signal propagation delay, Node A emits a further Segment before the
+   report arrives; this is expected behavior.  On receipt of the report,
+   Node A ceases emitting Segments of Transfer 7, emits a Transfer
+   Cancel Message on Channel X, and uses the reclaimed capacity of
+   Channel X for other Transfers.  Node A records that Node B holds the
+   Bundle transferred by Transfer 7, and does not offer it to Node B
+   again.
+
+Acknowledgments
+
+   The status reporting semantics defined in this document draw on the
+   XFER_REFUSE and XFER_ACK mechanisms of the TCP Convergence-Layer
+   Protocol Version 4 [RFC9174].
+
+Author's Address
+
+   Rick Taylor
+   Aalyria Technologies
+   Email: rtaylor@aalyria.com
