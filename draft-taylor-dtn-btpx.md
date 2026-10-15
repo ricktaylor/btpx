@@ -251,6 +251,8 @@ In addition to the Deployment Considerations of {{!I-D.ietf-dtn-btpu}}, which co
 
 1. The association of Channels between a pair of nodes requires a-priori configuration.  No in-band discovery or negotiation mechanism is defined.
 
+1. It does not signal whether a receiving node is present on, or receiving, a Channel.  Deployments are expected to learn this from the link layer, from contact plans, or by other means.
+
 1. In mixed deployments, nodes not implementing this extension will encounter the Transfer Status Message and the Bundle Message ID Hint as unrecognized Message and Hint types, and handle them accordingly, as specified in {{!I-D.ietf-dtn-btpu}}.
 
 # IANA Considerations
@@ -321,4 +323,4 @@ On receipt of the first Transfer Segment Message, Node B recognizes from the pri
 
 The status reporting semantics defined in this document draw on the XFER_REFUSE and XFER_ACK mechanisms of the TCP Convergence-Layer Protocol Version 4 {{?RFC9174}}.
 
-[^1]: The initial Status Codes draw on the transfer refusal reason codes of RFC 9174, but are defined independently.  Whether further Status Codes are needed, for example to report that a receiving node is about to stop receiving, needs discussing by the WG.
+[^1]: The initial Status Codes draw on the transfer refusal reason codes of RFC 9174, but are defined independently.  Whether further Status Codes are needed needs discussing by the WG.
